@@ -1,7 +1,7 @@
-from typing import NamedTuple
+from typing import List, NamedTuple
 
 
-def split(x: str, sep: str, maxsplit: int) -> list[str]:
+def split(x: str, sep: str, maxsplit: int) -> List[str]:
     """Same as x.split but always returns a list
     of length `maxsplit+1`, padded with empty strings."""
     parts = x.split(sep, maxsplit)

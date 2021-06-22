@@ -24,7 +24,7 @@ OUTPUT_DIRNAME = "_environments"
 
 class CondaEnvironmentYaml(BaseModel):
     name: str
-    dependencies: list[str]
+    dependencies: List[str]
 
     @classmethod
     def load(cls, name: str) -> "CondaEnvironmentYaml":
@@ -61,7 +61,7 @@ class CondaPackage(BaseModel):
 
 
 class CondaLockfile(BaseModel):
-    packages: list[CondaPackage]
+    packages: List[CondaPackage]
 
     @classmethod
     def load(cls, name: str) -> "CondaLockfile":
