@@ -1,0 +1,25 @@
+# platform: osx-64
+# env_hash: 0b0d2282cd9cc1c71bdaa6c3485130b5fdbecb02f4568284172fa645c5248d35
+@EXPLICIT
+https://repo.anaconda.com/pkgs/main/osx-64/ca-certificates-2021.5.25-hecd8cb5_1.conda#3f5f0cd54cb1fdefc68aecb495bb4887
+https://repo.anaconda.com/pkgs/main/osx-64/libcxx-10.0.0-1.conda#86574bfd5bcf4921237da41c07534cdc
+https://repo.anaconda.com/pkgs/main/osx-64/xz-5.2.5-h1de35cc_0.conda#f38610dab0f2b0cb05f1b31f354113c5
+https://repo.anaconda.com/pkgs/main/osx-64/zlib-1.2.11-h1de35cc_3.conda#67bb31afee816662edebfc3171360ccf
+https://repo.anaconda.com/pkgs/main/osx-64/libffi-3.3-hb1e8313_2.conda#0c959d444ac65555cb836cdbd3e9a2d9
+https://repo.anaconda.com/pkgs/main/osx-64/ncurses-6.2-h0a44026_1.conda#649f497ed2ff2704749256d3532d144b
+https://repo.anaconda.com/pkgs/main/osx-64/openssl-1.1.1k-h9ed2024_0.conda#2ecbfa7a9684bbaaa057c6dac778abc3
+https://repo.anaconda.com/pkgs/main/osx-64/tk-8.6.10-hb0a8c7a_0.conda#2f199f5862f5b000479408673eadb88d
+https://repo.anaconda.com/pkgs/main/osx-64/readline-8.1-h9ed2024_0.conda#ce1a650fddb885c47ccdb28c90a2057a
+https://repo.anaconda.com/pkgs/main/osx-64/sqlite-3.35.4-hce871da_0.conda#2effbf71c73e6b006f6d7ae4c4c4eb5b
+https://repo.anaconda.com/pkgs/main/osx-64/python-3.8.10-h88f2d9e_7.conda#84a0f621e4d8615518e888795f5523d8
+https://repo.anaconda.com/pkgs/main/osx-64/certifi-2021.5.30-py38hecd8cb5_0.conda#cebaf965a45275cc19cec029b2a5d871
+https://repo.anaconda.com/pkgs/main/noarch/itsdangerous-2.0.1-pyhd3eb1b0_0.conda#c7850bc75cded6e6c0e17733aa6d0436
+https://repo.anaconda.com/pkgs/main/osx-64/markupsafe-2.0.1-py38h9ed2024_0.conda#ce67815e11d846384abf63db2db75a8a
+https://repo.anaconda.com/pkgs/main/noarch/tqdm-4.59.0-pyhd3eb1b0_1.conda#5420184f4097c7a3c46892fa5abb5c21
+https://repo.anaconda.com/pkgs/main/noarch/werkzeug-1.0.1-pyhd3eb1b0_0.tar.bz2#855ae785dd316068d0b6cd3a5a5d2939
+https://repo.anaconda.com/pkgs/main/noarch/zipp-3.4.1-pyhd3eb1b0_0.conda#0c647479e59d235ee8bfaca0689b4eba
+https://repo.anaconda.com/pkgs/main/osx-64/importlib-metadata-3.10.0-py38hecd8cb5_0.conda#a32eccde760a8b1798014990762fad19
+https://repo.anaconda.com/pkgs/main/osx-64/setuptools-52.0.0-py38hecd8cb5_0.conda#c46330aa352bc2b25f263ce13f9a83aa
+https://repo.anaconda.com/pkgs/main/noarch/click-8.0.1-pyhd3eb1b0_0.conda#b9107c94b10ed3429aee85a2d77629c8
+https://repo.anaconda.com/pkgs/main/noarch/jinja2-3.0.0-pyhd3eb1b0_0.conda#ad74a3cdc7aaa5d94b43f9530381d94d
+https://repo.anaconda.com/pkgs/main/noarch/flask-1.1.2-pyhd3eb1b0_0.tar.bz2#eee9d2de0a27685197801b09c37b4762

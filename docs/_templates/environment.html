@@ -1,0 +1,17 @@
+{% extends "!page.html" %} {% block body %}
+<h1>Environment: {{ env.name }}</h1>
+<p>
+	Environment specification and current lockfile for the
+	<a href="{{ doc_loc }}">{{ env.name}} environment</a> .
+</p>
+<h2>{{ env_filename }}</h2>
+<pre>
+{{ env_source }}
+</pre>
+
+<h2>{{ lock_filename }}</h2>
+<pre>
+{{ lock_source }}
+</pre>
+
+{% endblock %}

@@ -1,0 +1,5 @@
+name: basic
+dependencies:
+  - flask
+  - tqdm
+  - python=3.8
