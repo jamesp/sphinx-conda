@@ -1,11 +1,25 @@
+import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    Iterator,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import docutils.parsers.rst.directives as directives
+from sphinx.environment import BuildEnvironment
 import yaml
 from docutils import nodes
-from pydantic import BaseModel
+from icecream import ic
+
 from sphinx import addnodes
 from sphinx.application import Sphinx
 from sphinx.directives import ObjectDescription
@@ -13,75 +27,14 @@ from sphinx.domains import Domain, Index, ObjType
 from sphinx.ext.viewcode import is_supported_builder, viewcode_anchor
 from sphinx.locale import _
 from sphinx.roles import XRefRole
-from sphinx.util import status_iterator
+from sphinx.util import logger, status_iterator
 from sphinx.util.docutils import SphinxDirective
 
 from .util import object_desc, split
-
-ENVS_DIR = Path("environments")
-OUTPUT_DIRNAME = "_environments"
+from .model import Environment, CondaLockfile, CondaPackage, CondaYamlfile
 
 
-class CondaEnvironmentYaml(BaseModel):
-    name: str
-    dependencies: List[str]
-
-    @classmethod
-    def load(cls, name: str) -> "CondaEnvironmentYaml":
-        filename = cls.filename(name)
-        if not filename.exists():
-            raise FileNotFoundError(f"Environment file {filename} doesn't exist")
-        with open(filename, "r") as fh:
-            raw = yaml.safe_load(fh)
-            obj = CondaEnvironmentYaml(**raw)
-        return obj
-
-    @classmethod
-    def filename(cls, name: str) -> Path:
-        return ENVS_DIR / f"{name}.yml"
-
-
-class CondaPackage(BaseModel):
-    name: str
-    version: Optional[str]
-    build: Optional[str]
-    url: Optional[str]
-    md5: Optional[str]
-
-    @classmethod
-    def from_url(cls, url: str) -> "CondaPackage":
-        url, md5 = split(url, "#", 1)
-        package = Path(url).name.replace(".conda", "").replace(".tar.bz2", "")
-        # packages are named something like hyphenated-name-version-build
-        # so the last 2 hyphens need to be split on.
-        # so we reverse the string before splitting into 3, then reverse back
-        strap = split(package[::-1], "-", 2)
-        build, version, name = [p[::-1] for p in strap]
-        return cls(name=name, version=version, build=build, url=url, md5=md5)
-
-
-class CondaLockfile(BaseModel):
-    packages: List[CondaPackage]
-
-    @classmethod
-    def load(cls, name: str) -> "CondaLockfile":
-        filename = cls.filename(name)
-        if not filename.exists():
-            raise FileNotFoundError(f"Environment lockfile {filename} doesn't exist")
-        with open(filename, "r") as fh:
-            pkgs = []
-            for line in fh:
-                line = line.strip()
-                if line.startswith("#"):
-                    continue
-                if line.upper() == "@EXPLICIT":
-                    continue
-                pkgs.append(CondaPackage.from_url(line))
-        return CondaLockfile(packages=pkgs)
-
-    @classmethod
-    def filename(cls, name: str) -> Path:
-        return ENVS_DIR / f"{name}.lock"
+OUTPUT_DIR = Path("_environments")
 
 
 def create_field(name: str, *args: Any) -> nodes.field:
@@ -97,60 +50,82 @@ def create_field(name: str, *args: Any) -> nodes.field:
     return field
 
 
-class CondaEnvironmentDirective(ObjectDescription):
+class CondaEnvironmentDirective(ObjectDescription[Environment]):
     required_arguments = 1
     final_argument_whitespace = True
     has_content = True
     objtype = "environment"
-    sig: str
+    option_spec = {
+        "envfile": directives.path,
+        "lockfile": directives.path,
+        "hidepackages": directives.flag,
+        "hidedeps": directives.flag,
+    }
 
-    env_obj: CondaEnvironmentYaml
+    def rel_path(self, path: Path) -> Path:
+        """Resolve a path relative to this directive."""
+        return (Path(self.env.doc2path(self.env.docname)).parent / path).resolve()
 
-    option_spec = {"hidepackages": directives.flag, "hidedeps": directives.flag}
-
-    def handle_signature(self, sig: str, signode: addnodes.desc_signature) -> str:
-        self.sig = sig
-        self.env_obj = CondaEnvironmentYaml.load(sig)
-        self.lockfile = CondaLockfile.load(sig)
+    def handle_signature(
+        self, sig: str, signode: addnodes.desc_signature
+    ) -> Environment:
+        # create the environment signature in the document
         signode += addnodes.desc_annotation(text=self.objtype + " ")
-        signode += addnodes.desc_name(text=self.env_obj.name)
+        signode += addnodes.desc_name(text=sig)
         # add a link to the source code
-        pagename = str(Path(OUTPUT_DIRNAME) / "environment" / sig)
-        signode += viewcode_anchor(
+        pagename = (OUTPUT_DIR / sig).as_posix()
+        anchor = viewcode_anchor(
             reftarget=pagename, refid=signode.get("fullname"), refdoc=self.env.docname
         )
-        return sig
+        signode += anchor
 
-    def transform_content(self, contentnode: addnodes.desc_content) -> None:
-        pkgs = list(sorted(self.lockfile.packages, key=lambda x: x.name))
-        alread_shown = []
-        if "hidepackages" not in self.options:
-            contentnode += nodes.rubric(text="Packages")
-            fields = nodes.field_list()
-            for spec in self.env_obj.dependencies:
-                pkg_name, _ = split(spec, "=", 1)
-                print("pkg_name", pkg_name)
-                pkg = [p for p in pkgs if p.name == pkg_name][0]
-                field = create_field(pkg_name, pkg.version)
-                fields += field
-                alread_shown.append(pkg)
-            contentnode += fields
+        # yaml_obj, lock_obj = None, None
+        # if "envfile" in self.options:
+        #     _, env_file = self.env.relfn2path(self.options.get("envfile"))
+        #     yaml_obj = CondaYamlfile.load(env_file)
+        # if "lockfile" in self.options:
+        #     _, lockfile = self.env.relfn2path(self.options.get("lockfile"))
+        #     lock_obj = CondaLockfile.load(lockfile)
+        environment = Environment(
+            name=sig,
+            yamlfile=self.rel_path(Path(self.options.get("envfile"))),
+            lockfile=self.rel_path(Path(self.options.get("lockfile"))),
+        )
+        return environment
 
-            if "hidedeps" not in self.options:
-                contentnode += nodes.rubric(text="Dependencies")
-                fields = nodes.field_list()
-                for pkg in pkgs:
-                    if pkg in alread_shown:
-                        continue
-                    field = create_field(pkg.name, pkg.version)
-                    fields += field
-                contentnode += fields
+    # def transform_content(self, contentnode: addnodes.desc_content) -> None:
+    #     pkgs = list(sorted(self.environment.lockfile.packages, key=lambda x: x.name))
+    #     already_shown: List[CondaPackage] = []
+    #     if "hidepackages" not in self.options:
+    #         contentnode += nodes.rubric(text="Packages")
+    #         fields = nodes.field_list()
+    #         for spec in self.env_obj.dependencies:
+    #             pkg_name, _ = split(spec, "=", 1)
+    #             print("pkg_name", pkg_name)
+    #             pkg = [p for p in pkgs if p.name == pkg_name][0]
+    #             field = create_field(pkg_name, pkg.version)
+    #             fields += field
+    #             already_shown.append(pkg)
+    #         contentnode += fields
 
-    def add_target_and_index(self, name_cls, sig, signode):
+    #         if "hidedeps" not in self.options:
+    #             contentnode += nodes.rubric(text="Dependencies")
+    #             fields = nodes.field_list()
+    #             for pkg in pkgs:
+    #                 if pkg in already_shown:
+    #                     continue
+    #                 field = create_field(pkg.name, pkg.version)
+    #                 fields += field
+    #             contentnode += fields
+
+    def add_target_and_index(
+        self, name: Environment, sig: str, signode: addnodes.desc_signature
+    ):
+        # the super method has signature (name, sig, signode)
+        # but really we know name to be an environment obj
         signode["ids"].append("environment" + "-" + sig)
-        domain = self.env.get_domain("conda")
-
-        domain.add_environment(sig, self.lockfile.packages)  # type: ignore
+        domain = cast(CondaDomain, self.env.get_domain("conda"))
+        domain.add_environment(name, self.env.docname)
 
 
 def collect_pages(
@@ -161,72 +136,83 @@ def collect_pages(
         return
     urito = app.builder.get_relative_uri
 
-    environments = [object_desc(*x) for x in env.get_domain("conda").get_objects()]
-    for environment in status_iterator(
-        environments,
+    domain = cast(CondaDomain, env.get_domain("conda"))
+    env_objs = list(domain.get_objects())
+
+    for env_obj in status_iterator(
+        env_objs,
         "generating environment pages... ",
         "blue",
-        len(environments),
+        len(env_objs),
         app.verbosity,
-        lambda x: x[0],
+        stringify_func=lambda x: x.name,
     ):
         # construct a page name for the highlighted source
-        pagename = str(Path(OUTPUT_DIRNAME) / environment.name.replace(".", "/"))
-        backlink = urito(pagename, environment.docname) + "#" + environment.anchor
+        env = domain.get_environment(env_obj.name)
+        pagename = (OUTPUT_DIR / env.name).as_posix()
+        backlink = urito(pagename, env_obj.docname) + "#" + env_obj.anchor
         parents = []
-        env_file = CondaEnvironmentYaml.filename(environment.display_name)
-        lock_file = CondaLockfile.filename(environment.display_name)
         context = {
             "parents": parents,
-            "title": environment.name,
-            "env": CondaEnvironmentYaml.load(environment.display_name),
-            "env_filename": env_file,
-            "lock_filename": lock_file,
-            "env_source": open(env_file, "r").read(),
-            "lock_source": open(lock_file, "r").read(),
+            "title": env.name,
+            "name": env.name,
             "doc_loc": backlink,
         }
+        if env.yamlfile:
+            context.update(
+                {
+                    "env_filename": env.yamlfile.name,
+                    "env_source": open(env.yamlfile).read(),
+                }
+            )
+        if env.lockfile:
+            context.update(
+                {
+                    "lock_filename": env.lockfile.name,
+                    "lock_source": open(env.lockfile).read(),
+                }
+            )
         yield (pagename, context, "environment.html")
 
-    context = {"environments": [e for e in environments]}
+    context = {"environments": env_objs}
     yield (
-        str(Path(OUTPUT_DIRNAME) / "environment/index"),
+        (OUTPUT_DIR / "index").as_posix(),
         context,
         "environment_index.html",
     )
 
 
-class CondaPackageDirective(SphinxDirective):
-    def run(self):
-        return nodes.title("Hello")
+# class CondaPackageDirective(SphinxDirective):
+#     def run(self):
+#         return nodes.title("Hello")
 
 
-class CondaEnvironmentIndex(Index):
-    name = "conda-environment"
-    localname = "Environment Index"
-    shortname = "Environment"
+# class CondaEnvironmentIndex(Index):
+#     name = "conda-environment"
+#     localname = "Environment Index"
+#     shortname = "Environment"
 
-    def generate(self, docnames=None):
-        content = defaultdict(list)
+#     def generate(self, docnames=None):
+#         content = defaultdict(list)
 
-        # sort the list of environments in alphabetical order
-        environments = [x for x in self.domain.get_objects() if x[2] == "environment"]
-        print("environments", environments)
-        environments = sorted(environments, key=lambda environment: environment[0])
+#         # sort the list of environments in alphabetical order
+#         environments = [x for x in self.domain.get_objects() if x[2] == "environment"]
+#         print("environments", environments)
+#         environments = sorted(environments, key=lambda environment: environment[0])
 
-        # generate the expected output, shown below, from the above using the
-        # first letter of the environment as a key to group thing
-        #
-        # name, subtype, docname, anchor, extra, qualifier, description
-        for name, dispname, typ, docname, anchor, _ in environments:
-            content[dispname[0].lower()].append(
-                (dispname, 0, docname, anchor, docname, "", typ)
-            )
+#         # generate the expected output, shown below, from the above using the
+#         # first letter of the environment as a key to group thing
+#         #
+#         # name, subtype, docname, anchor, extra, qualifier, description
+#         for name, dispname, typ, docname, anchor, _ in environments:
+#             content[dispname[0].lower()].append(
+#                 (dispname, 0, docname, anchor, docname, "", typ)
+#             )
 
-        # convert the dict to the sorted list of tuples expected
-        content = sorted(content.items())
+#         # convert the dict to the sorted list of tuples expected
+#         content = sorted(content.items())
 
-        return content, True
+#         return content, True
 
 
 class CondaPackageIndex(Index):
@@ -238,39 +224,53 @@ class CondaPackageIndex(Index):
 
     def generate(self, docnames=None):
         content = defaultdict(list)
+        domain = cast(CondaDomain, self.domain)
 
-        environments = {
-            name: (dispname, typ, docname, anchor)
-            for name, dispname, typ, docname, anchor, _ in self.domain.get_objects()
-        }
-        environment_packages: Dict[str, Dict[str, CondaPackage]] = self.domain.data[
-            "environment_packages"
-        ]
-        package_environments = defaultdict(list)
-
-        # flip from environment_packages to package_environments
-        for environment_name, packages in environment_packages.items():
-            for package in packages:
-                package_environments[package].append(environment_name)
-
-        # convert the mapping of package to environments to produce the expected
-        # output, shown below, using the package name as a key to group
-        #
-        # name, subtype, docname, anchor, extra, qualifier, description
-        for package, environment_names in package_environments.items():
-            for environment_name in environment_names:
-                dispname, typ, docname, anchor = environments[environment_name]
-                content[package].append(
+        for env_obj in domain.get_objects():
+            packages = domain.get_environment_packages(env_obj.name)
+            for pkg in packages:
+                content[pkg.name].append(
                     (
-                        dispname,
+                        env_obj.display_name,
                         0,
-                        docname,
-                        anchor,
-                        typ,
+                        env_obj.docname,
+                        env_obj.anchor,
+                        env_obj.type,
                         "",
-                        environment_packages[environment_name][package].version,
+                        pkg.version,
                     )
                 )
+
+        # environments = {
+        #     name: (dispname, typ, docname, anchor)
+        #     for name, dispname, typ, docname, anchor, _ in domain.get_objects()
+        # }
+        # environment_packages = domain.get_environment_packages(name)
+        # package_environments = defaultdict(list)
+
+        # # flip from environment_packages to package_environments
+        # for environment_name, packages in environment_packages.items():
+        #     for package in packages:
+        #         package_environments[package].append(environment_name)
+
+        # # convert the mapping of package to environments to produce the expected
+        # # output, shown below, using the package name as a key to group
+        # #
+        # # name, subtype, docname, anchor, extra, qualifier, description
+        # for package, environment_names in package_environments.items():
+        #     for environment_name in environment_names:
+        #         dispname, typ, docname, anchor = environments[environment_name]
+        #         content[package].append(
+        #             (
+        #                 dispname,
+        #                 0,
+        #                 docname,
+        #                 anchor,
+        #                 typ,
+        #                 "",
+        #                 environment_packages[environment_name][package].version,
+        #             )
+        #         )
 
         # convert the dict to the sorted list of tuples expected
         content = sorted(content.items())
@@ -286,36 +286,51 @@ class CondaDomain(Domain):
     }
     directives = {
         "environment": CondaEnvironmentDirective,
-        "package": CondaPackageDirective,
+        # "package": CondaPackageDirective,
     }
-    indices = {CondaEnvironmentIndex, CondaPackageIndex}
-    initial_data = {"environments": [], "environment_packages": {}}
+    # indices = {CondaEnvironmentIndex, CondaPackageIndex}
+    indices = {CondaPackageIndex}
+    initial_data = {
+        "environment_refs": [],
+        "environments": {},
+        "environment_packages": {},
+    }
     object_types: Dict[str, ObjType] = {
         "environment": ObjType("environment", "environment", "obj")
     }
 
-    def get_objects(self):
-        for obj in self.data["environments"]:
-            yield (obj)
+    def get_objects(self) -> Iterator[object_desc]:
+        for obj in self.data["environment_refs"]:
+            yield obj
 
-    def add_environment(self, sig: str, packages: List[CondaPackage]):
-        name = "{}.{}".format("environment", sig)
-        anchor = "environment-{}".format(sig)
+    def add_environment(self, env: Environment, docname: str):
+        idx = "{}.{}".format("environment", env.name)
+        anchor = "environment-{}".format(env.name)
 
-        self.data["environment_packages"][name] = {pkg.name: pkg for pkg in packages}
-        # name, dispname, type, docname, anchor, priority
-        self.data["environments"].append(
-            (name, sig, "Environment", self.env.docname, anchor, 0)
-        )
+        packages: Dict[str, CondaPackage] = {}
+        if env.yamlfile:
+            yaml_obj = CondaYamlfile.load(env.yamlfile)
+            for spec in yaml_obj.dependencies:
+                pkg_name, version = split(spec, "=", 1)
+                packages[pkg_name] = CondaPackage(name=pkg_name, version=version)
+        if env.lockfile:
+            lock_obj = CondaLockfile.load(env.lockfile)
+            for pkg in lock_obj.packages:
+                packages[pkg.name] = pkg
 
+        self.data["environment_packages"][idx] = list(packages.values())
+        obj = object_desc(idx, env.name, "Environment", docname, anchor, 0)
+        self.data["environment_refs"].append(obj)
+        self.data["environments"][idx] = env
 
-def obj_transform(app, domain, objtype, contentnode):
-    # contentnode += nodes.list_item("hello!")
-    # print("obj_transform", app, domain, objtype, contentnode)
-    pass
+    def get_environment_packages(self, idx: str) -> List[CondaPackage]:
+        return self.data["environment_packages"][idx]
+
+    def get_environment(self, idx: str) -> Environment:
+        return self.data["environments"][idx]
 
 
 def setup(app: Sphinx):
     app.add_domain(CondaDomain)
     app.connect("html-collect-pages", collect_pages)
-    app.connect("object-description-transform", obj_transform)
+    # app.connect("object-description-transform", obj_transform)

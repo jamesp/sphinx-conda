@@ -4,7 +4,7 @@
 <h1>Environment Index</h1>
 <ul>
 {% for env in environments %}
-<li><a href="_modules/{{ pathto(env.name | replace('.', '/')) }}">{{ env.display_name }}</a></li>
+<li><a href="./{{ env.display_name }}.html">{{ env.display_name }}</a></li>
 {% endfor %}
 </ul>
 {% endblock %}

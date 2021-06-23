@@ -25,20 +25,9 @@ Title
 
 Here is an env file with some more details:
 
+
 .. conda:environment:: basic
-   :hidedeps:
+   :envfile: ../environments/basic.yml
+   :lockfile: ../environments/basic.lock
 
-   :owner: James Penn
-   :maintainers:
-      - jamesp
-
-   With a bunch of details
-
-   .. literalinclude:: /../environments/basic.yml
-
-And some more stuff here
-
-
-
-sds
-
+   Basic information about this environment
