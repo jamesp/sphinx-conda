@@ -1,4 +1,0 @@
-name: test-environment
-dependencies:
-  - flask
-  - python=3.9

@@ -1,0 +1,5 @@
+name: dev-environment
+dependencies:
+  - flask
+  - tqdm
+  - python=3.8

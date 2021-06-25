@@ -22,34 +22,33 @@ Indices and tables
 Title
 -----
 
+This is an example of using the ``sphinx-conda`` extension.
 
-Here is an env file with some more details:
+.. conda:environment:: dev-environment
+   :yamlfile: ../environments/dev-environment.yml
+   :lockfile: ../environments/dev-environment-linux-64.lock
 
+   This environment provides all the packages that we currently build and
+   test our software against.
 
-.. conda:environment:: basic
-   :envfile: ../environments/basic.yml
-   :lockfile: ../environments/basic.lock
-
-   Basic information about this environment
-
-
-.. conda:environment:: test
-   :envfile: ../environments/test.yml
-   :lockfile: ../environments/test.lock
-
-   Here's a second environment, similar but with different packages.
-
-   .. conda:packagelist:: Packages in the environment
+   .. conda:packagelist:: Current tested package list and versions
       :align: left
       :width: 100%
       :widths: 3 2 2
       :hide-implicit:
 
+   To setup the development environment we recommend using the lockfile which
+   will install the exact same versions as above.  To install::
 
-   .. conda:packagelist:: Dependencies required by packages above
+      conda create -n dev-environment --file environments/dev-environment.lock
+
+   The additional following packages are also included in the environment to satisfy
+   the dependencies of our dependencies.  If one of these packages below becomes an
+   explicit dependency of our project, we should add it to ``dev-environment.yml``
+   and ``environment.yml``.
+
+   .. conda:packagelist:: Sub-dependencies
       :align: left
       :width: 100%
       :widths: 3 2 2
       :hide-explicit:
-
-   Some more content

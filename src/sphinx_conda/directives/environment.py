@@ -24,7 +24,7 @@ class CondaEnvironmentDirective(ObjectDescription[Environment]):
     has_content = True
     objtype = "environment"
     option_spec = {
-        "envfile": directives.path,
+        "yamlfile": directives.path,
         "lockfile": directives.path,
     }
 
@@ -49,10 +49,18 @@ class CondaEnvironmentDirective(ObjectDescription[Environment]):
         # object so we can reference it from other directives
         signode.parent["names"].append("{}.{}".format("environment", sig))
 
+        yamlfile = None
+        if "yamlfile" in self.options:
+            yamlfile = self.rel_path(Path(self.options.get("yamlfile")))
+
+        lockfile = None
+        if "lockfile" in self.options:
+            lockfile = self.rel_path(Path(self.options.get("lockfile")))
+
         environment = Environment(
             name=sig,
-            yamlfile=self.rel_path(Path(self.options.get("envfile"))),
-            lockfile=self.rel_path(Path(self.options.get("lockfile"))),
+            yamlfile=yamlfile,
+            lockfile=lockfile,
         )
         return environment
 

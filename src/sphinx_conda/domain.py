@@ -76,8 +76,8 @@ class CondaDomain(Domain):
         # set to explicit = True below
         # so if a yaml file is provided, set all lockfile to
         # explicit=False (i.e. implicit dependencies)
-        # if no yamlfile is provided, set explicit=None (i.e. unknown)
-        lockfile_explicit = False if env.yamlfile else None
+        # if no yamlfile is provided, set explicit=True (i.e. unknown)
+        lockfile_explicit = False if env.yamlfile else True
         if env.lockfile:
             lock_obj = CondaLockfile.load(env.lockfile)
             for pkg in lock_obj.packages:
