@@ -41,7 +41,15 @@ Here is an env file with some more details:
 
    .. conda:packagelist:: Packages in the environment
       :align: left
-      :widths: 30 10 10
+      :width: 100%
+      :widths: 3 2 2
+      :hide-implicit:
 
+
+   .. conda:packagelist:: Dependencies required by packages above
+      :align: left
+      :width: 100%
+      :widths: 3 2 2
+      :hide-explicit:
 
    Some more content

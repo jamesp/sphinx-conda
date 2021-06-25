@@ -1,35 +1,22 @@
+from functools import total_ordering
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 import yaml
 from pydantic import BaseModel
-from pydantic.dataclasses import dataclass
 
 from .util import split
 
 
-class CondaYamlfile(BaseModel):
-    name: str
-    dependencies: List[str]
-    filename: Path
-
-    @classmethod
-    def load(cls, filename: Union[str, Path]) -> "CondaYamlfile":
-        filename = Path(filename)
-        if not filename.exists():
-            raise FileNotFoundError(f"Environment file {filename} doesn't exist")
-        with open(filename, "r") as fh:
-            raw = yaml.safe_load(fh)
-            obj = CondaYamlfile(filename=filename, **raw)
-        return obj
-
-
+@total_ordering
 class CondaPackage(BaseModel):
     name: str
     version: Optional[str]
     build: Optional[str]
     url: Optional[str]
     md5: Optional[str]
+    # whether the package is named in the conda environment.yml
+    explicit: Optional[bool] = None
 
     @classmethod
     def from_url(cls, url: str) -> "CondaPackage":
@@ -41,6 +28,34 @@ class CondaPackage(BaseModel):
         strap = split(package[::-1], "-", 2)
         build, version, name = [p[::-1] for p in strap]
         return cls(name=name, version=version, build=build, url=url, md5=md5)
+
+    def __lt__(self, other: Any) -> bool:
+        if isinstance(other, CondaPackage):
+            return self.name < other.name
+        else:
+            return NotImplemented
+
+
+class CondaYamlfile(BaseModel):
+    name: str
+    dependencies: List[CondaPackage]
+    filename: Path
+
+    @classmethod
+    def load(cls, filename: Union[str, Path]) -> "CondaYamlfile":
+        filename = Path(filename)
+        if not filename.exists():
+            raise FileNotFoundError(f"Environment file {filename} doesn't exist")
+        with open(filename, "r") as fh:
+            raw = yaml.safe_load(fh)
+            if raw.get("dependencies"):
+                deps = []
+                for d in raw["dependencies"]:
+                    name, ver = split(d, "=", 1)
+                    deps.append({"name": name, "version": ver, "explicit": True})
+                raw["dependencies"] = deps
+            obj = CondaYamlfile(filename=filename, **raw)
+        return obj
 
 
 class CondaLockfile(BaseModel):
