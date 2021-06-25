@@ -15,24 +15,24 @@ from typing import (
 )
 
 import docutils.parsers.rst.directives as directives
-from sphinx.environment import BuildEnvironment
+from docutils.parsers.rst.directives.tables import ListTable
 import yaml
 from docutils import nodes
 from icecream import ic
-
 from sphinx import addnodes
 from sphinx.application import Sphinx
 from sphinx.directives import ObjectDescription
 from sphinx.domains import Domain, Index, ObjType
+from sphinx.environment import BuildEnvironment
 from sphinx.ext.viewcode import is_supported_builder, viewcode_anchor
 from sphinx.locale import _
 from sphinx.roles import XRefRole
 from sphinx.util import logger, status_iterator
 from sphinx.util.docutils import SphinxDirective
+from docutils.parsers.rst.states import Body
 
+from .model import CondaLockfile, CondaPackage, CondaYamlfile, Environment
 from .util import object_desc, split
-from .model import Environment, CondaLockfile, CondaPackage, CondaYamlfile
-
 
 OUTPUT_DIR = Path("_environments")
 
@@ -48,6 +48,134 @@ def create_field(name: str, *args: Any) -> nodes.field:
     field += nodes.field_name(text=name)
     field += body
     return field
+
+
+class PackageListDirective(ListTable, SphinxDirective):
+    def find_packages(self) -> List[CondaPackage]:
+        env_obj = None
+        parent = cast(nodes.Element, self.state.parent)
+        while parent:
+            if parent.get("domain") == "conda" and parent["objtype"] == "environment":
+                env_obj = cast(addnodes.desc, parent)
+                break
+            parent = parent.parent
+        if env_obj:
+            domain = cast(CondaDomain, self.env.get_domain("conda"))
+            idx = cast(str, env_obj["names"][-1])
+            pkgs = domain.get_environment_packages(idx)
+            return pkgs
+        else:
+            raise ValueError("Not called from within a conda:environment directive")
+
+    def run(self):
+        ic(self.option_spec)
+        table_data = []
+        headers = [nodes.Text("Name"), nodes.Text("Version"), nodes.Text("Build")]
+        table_data.append(headers)
+
+        for p in self.find_packages():
+            table_data.append(
+                [nodes.Text(p.name), nodes.Text(p.version), nodes.Text(p.build)]
+            )
+
+        title, messages = self.make_title()
+        node = nodes.Element()  # anonymous container for parsing
+
+        header_rows = 1
+        stub_columns = 0
+        col_widths = self.get_column_widths(3)
+        table_node = self.build_table_from_list(
+            table_data, col_widths, header_rows, stub_columns
+        )
+        if "align" in self.options:
+            table_node["align"] = self.options.get("align")
+        table_node["classes"] += self.options.get("class", [])
+        self.set_table_width(table_node)
+        self.add_name(table_node)
+        if title:
+            table_node.insert(0, title)
+        return [table_node] + messages
+
+
+# class PackageListDirective(SphinxDirective):
+#     required_arguments = 0
+#     has_content = True
+#     option_spec = {}
+
+#     def run(self) -> List[nodes.Node]:
+#         env_obj = None
+#         parent = cast(nodes.Element, self.state.parent)
+#         while parent:
+#             if parent.get("domain") == "conda" and parent["objtype"] == "environment":
+#                 env_obj = cast(addnodes.desc, parent)
+#                 break
+#             parent = parent.parent
+#         if env_obj:
+#             domain = cast(CondaDomain, self.env.get_domain("conda"))
+#             idx = cast(str, env_obj["names"][-1])
+#             pkgs = domain.get_environment_packages(idx)
+#             if pkgs:
+#                 # # adapted from docutils.parsers.rst.directives.tables.ListTable
+#                 # table = nodes.table()
+#                 # table["classes"] += ["colwidths-auto"]
+#                 # tgroup = nodes.tgroup(cols=3)
+#                 # table += tgroup
+
+#                 # header = nodes.thead()
+#                 # pkg_table = nodes.tbody()
+
+#                 # rows = []
+#                 # for j in range(5):
+#                 #     row_node = nodes.row()
+#                 #     row_node.extend(
+#                 #         [nodes.entry("", nodes.Text("hello")) for i in range(3)]
+#                 #     )
+#                 #     rows.append(row_node)
+
+#                 # pkg_table.extend(rows)
+#                 # # pkg_table += [
+#                 # #     nodes.row("", nodes.Text(f"{p.name} {p.version}")) for p in pkgs
+#                 # # ]
+#                 # table += [header, pkg_table]
+#                 # return [table]
+
+
+#                 # table = nodes.table()
+#                 # table["classes"] += ["colwidths-auto"]
+
+#                 # tgroup = nodes.tgroup(cols=3)
+#                 # table += tgroup
+
+#                 # for column in ["Package", "Version", "Build"]:
+#                 #     colspec = nodes.colspec()
+#                 #     tgroup += colspec
+
+#                 # thead = nodes.thead()
+#                 # row = nodes.row()
+#                 # heads = []
+#                 # for i in range(2):
+#                 #     entry = nodes.entry()
+#                 #     entry += nodes.Text(f"Hey {i}")
+#                 #     heads.append(entry)
+#                 # row.extend(heads)
+#                 # thead += row
+
+#                 # tbody = nodes.tbody()
+#                 # row = nodes.row()
+#                 # entry = nodes.entry()
+#                 # entry += nodes.Text("Hey content")
+
+#                 # row += entry
+#                 # tbody += row
+#                 # tgroup += thead
+#                 # tgroup += tbody
+
+#                 return [table]
+
+#             else:
+#                 return [nodes.Text("Packages: " + str(ic(pkgs)))]
+#         else:
+#             return [nodes.Text("No environment found in document heirarchy")]
 
 
 class CondaEnvironmentDirective(ObjectDescription[Environment]):
@@ -79,13 +207,10 @@ class CondaEnvironmentDirective(ObjectDescription[Environment]):
         )
         signode += anchor
 
-        # yaml_obj, lock_obj = None, None
-        # if "envfile" in self.options:
-        #     _, env_file = self.env.relfn2path(self.options.get("envfile"))
-        #     yaml_obj = CondaYamlfile.load(env_file)
-        # if "lockfile" in self.options:
-        #     _, lockfile = self.env.relfn2path(self.options.get("lockfile"))
-        #     lock_obj = CondaLockfile.load(lockfile)
+        # add the name of the environment to the parent
+        # object so we can reference it from other directives
+        signode.parent["names"].append("{}.{}".format("environment", sig))
+
         environment = Environment(
             name=sig,
             yamlfile=self.rel_path(Path(self.options.get("envfile"))),
@@ -124,6 +249,8 @@ class CondaEnvironmentDirective(ObjectDescription[Environment]):
         # the super method has signature (name, sig, signode)
         # but really we know name to be an environment obj
         signode["ids"].append("environment" + "-" + sig)
+        signode["_conda_yamlfile"] = str(name.yamlfile)
+        signode["_conda_lockfile"] = str(name.lockfile)
         domain = cast(CondaDomain, self.env.get_domain("conda"))
         domain.add_environment(name, self.env.docname)
 
@@ -131,6 +258,12 @@ class CondaEnvironmentDirective(ObjectDescription[Environment]):
 def collect_pages(
     app: Sphinx,
 ) -> Generator[Tuple[str, Dict[str, Any], str], None, None]:
+    """Generate source pages for all environments.
+
+    Similar to `sphinx.ext.autodoc`, here we generate files that contain
+    the source code (environment and lock files) of each named
+    environment, outputting to `/_environments/[env_name].html`.
+    """
     env = app.builder.env
     if not is_supported_builder(app.builder):
         return
@@ -235,46 +368,14 @@ class CondaPackageIndex(Index):
                         0,
                         env_obj.docname,
                         env_obj.anchor,
-                        env_obj.type,
-                        "",
+                        env_obj.type,  # show Requirement or Dependency
+                        "version",
                         pkg.version,
                     )
                 )
 
-        # environments = {
-        #     name: (dispname, typ, docname, anchor)
-        #     for name, dispname, typ, docname, anchor, _ in domain.get_objects()
-        # }
-        # environment_packages = domain.get_environment_packages(name)
-        # package_environments = defaultdict(list)
-
-        # # flip from environment_packages to package_environments
-        # for environment_name, packages in environment_packages.items():
-        #     for package in packages:
-        #         package_environments[package].append(environment_name)
-
-        # # convert the mapping of package to environments to produce the expected
-        # # output, shown below, using the package name as a key to group
-        # #
-        # # name, subtype, docname, anchor, extra, qualifier, description
-        # for package, environment_names in package_environments.items():
-        #     for environment_name in environment_names:
-        #         dispname, typ, docname, anchor = environments[environment_name]
-        #         content[package].append(
-        #             (
-        #                 dispname,
-        #                 0,
-        #                 docname,
-        #                 anchor,
-        #                 typ,
-        #                 "",
-        #                 environment_packages[environment_name][package].version,
-        #             )
-        #         )
-
         # convert the dict to the sorted list of tuples expected
         content = sorted(content.items())
-
         return content, True
 
 
@@ -286,6 +387,7 @@ class CondaDomain(Domain):
     }
     directives = {
         "environment": CondaEnvironmentDirective,
+        "packagelist": PackageListDirective,
         # "package": CondaPackageDirective,
     }
     # indices = {CondaEnvironmentIndex, CondaPackageIndex}

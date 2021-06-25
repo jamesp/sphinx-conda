@@ -31,3 +31,17 @@ Here is an env file with some more details:
    :lockfile: ../environments/basic.lock
 
    Basic information about this environment
+
+
+.. conda:environment:: test
+   :envfile: ../environments/test.yml
+   :lockfile: ../environments/test.lock
+
+   Here's a second environment, similar but with different packages.
+
+   .. conda:packagelist:: Packages in the environment
+      :align: left
+      :widths: 30 10 10
+
+
+   Some more content

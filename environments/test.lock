@@ -1,0 +1,29 @@
+# platform: linux-64
+# env_hash: ec3e93ea8ed0961aa401bb3b9fa4046a536a7f3680f49864bf2c3bacde9574a8
+@EXPLICIT
+https://repo.anaconda.com/pkgs/main/linux-64/_libgcc_mutex-0.1-main.conda#c3473ff8bdb3d124ed5ff11ec380d6f9
+https://repo.anaconda.com/pkgs/main/linux-64/ca-certificates-2021.5.25-h06a4308_1.conda#3a2f8a1a5c82296693933f8c3f236fcb
+https://repo.anaconda.com/pkgs/main/linux-64/ld_impl_linux-64-2.35.1-h7274673_9.conda#dec20f7c8f9d5f1b293abd97b0f518ed
+https://repo.anaconda.com/pkgs/main/linux-64/libstdcxx-ng-9.3.0-hd4cf53a_17.conda#47744aca0f5e63c4672d117c3596d937
+https://repo.anaconda.com/pkgs/main/linux-64/libgomp-9.3.0-h5101ec6_17.conda#fb19b69bac6d819c7f3d1126b05461e1
+https://repo.anaconda.com/pkgs/main/linux-64/_openmp_mutex-4.5-1_gnu.tar.bz2#84414b0edb0a36bd7e25fc4936c1abb5
+https://repo.anaconda.com/pkgs/main/linux-64/libgcc-ng-9.7.0-h5101ec6_17.conda#e9cbabbfb9e8a430f6a7660fe8dd77a7
+https://repo.anaconda.com/pkgs/main/linux-64/libffi-3.3-he6710b0_2.conda#88a54b8f50e351c650e16f4ee781440c
+https://repo.anaconda.com/pkgs/main/linux-64/ncurses-6.2-he6710b0_1.conda#b7ddf5ee3934b7f54620e8f6c0ee8a95
+https://repo.anaconda.com/pkgs/main/linux-64/openssl-1.1.1k-h27cfd23_0.conda#9c1822b18564cdc68c493366da6f46f4
+https://repo.anaconda.com/pkgs/main/linux-64/xz-5.2.5-h7b6447c_0.conda#73a16ea8ba890175a1ce94a3a87c8f68
+https://repo.anaconda.com/pkgs/main/linux-64/zlib-1.2.11-h7b6447c_3.conda#50aa4407424985d56ec8ae2f94626aa9
+https://repo.anaconda.com/pkgs/main/linux-64/readline-8.1-h27cfd23_0.conda#715789a38d447bc0cccc936209ac78c0
+https://repo.anaconda.com/pkgs/main/linux-64/tk-8.6.10-hbc83047_0.conda#9ba14aaba4818a66c820f85f5bf34ca0
+https://repo.anaconda.com/pkgs/main/linux-64/sqlite-3.35.4-hdfb4753_0.conda#390226b113ecaf216cc7a18aa11d7297
+https://repo.anaconda.com/pkgs/main/linux-64/python-3.9.7-h12debd9_8.tar.bz2#ba5ae2057847cc77f0718742fd68df74
+https://repo.anaconda.com/pkgs/main/linux-64/certifi-2021.5.30-py38h06a4308_0.conda#72292dd88ab45323a890685c90c271e3
+https://repo.anaconda.com/pkgs/main/noarch/itsdangerous-2.0.1-pyhd3eb1b0_0.conda#c7850bc75cded6e6c0e17733aa6d0436
+https://repo.anaconda.com/pkgs/main/linux-64/markupsafe-2.0.1-py38h27cfd23_0.conda#50dcb2135a5ded2e9f60a74bf5093e58
+https://repo.anaconda.com/pkgs/main/noarch/werkzeug-1.0.1-pyhd3eb1b0_0.tar.bz2#855ae785dd316068d0b6cd3a5a5d2939
+https://repo.anaconda.com/pkgs/main/noarch/zipp-5.4.1-pyhd3eb1b0_0.conda#0c647479e59d235ee8bfaca0689b4eba
+https://repo.anaconda.com/pkgs/main/linux-64/importlib-metadata-3.10.0-py38h06a4308_0.conda#b064c19266a568270f06245b9d4dc4ec
+https://repo.anaconda.com/pkgs/main/linux-64/setuptools-52.0.0-py38h06a4308_0.conda#28b5368307cefee1c0940ff14064ed9c
+https://repo.anaconda.com/pkgs/main/noarch/click-8.0.1-pyhd3eb1b0_0.conda#b9107c94b10ed3429aee85a2d77629c8
+https://repo.anaconda.com/pkgs/main/noarch/jinja2-3.0.0-pyhd3eb1b0_0.conda#ad74a3cdc7aaa5d94b43f9530381d94d
+https://repo.anaconda.com/pkgs/main/noarch/flask-1.1.2-pyhd3eb1b0_0.tar.bz2#eee9d2de0a27685197801b09c37b4762
